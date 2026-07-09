@@ -15,7 +15,7 @@ print("=" * 30)
 print("  LIMPEZA DE DADOS + CONSTRUÇÃO DO MODELO EM ESTRELA")
 print("=" * 30)
 
-# BLOCO 1 — CARREGAR E LIMPAR OS DADOS EM BRUTO
+# BLOCO 1: CARREGAR E LIMPAR OS DADOS EM BRUTO
 
 print("\n[1/3] Carregar e limpar os dados em bruto...")
 
@@ -59,7 +59,7 @@ print(f"      Registos válidos finais:    {len(df)}")
 df.to_excel("dataset_limpo.xlsx", index=False)
 print("      [OK] dataset_limpo.xlsx gerado")
 
-# BLOCO 2 — CONSTRUÇÃO DO MODELO DIMENSIONAL EM ESTRELA
+# BLOCO 2: CONSTRUÇÃO DO MODELO DIMENSIONAL EM ESTRELA
 
 print("\n[2/3] Construir o modelo dimensional em estrela...")
 
@@ -95,7 +95,7 @@ F_Vendas.insert(0, "id_venda", range(1, len(F_Vendas) + 1))
 
 print(f"      F_Vendas:  {len(F_Vendas)} linhas (tabela de factos)")
 
-# BLOCO 3 — EXPORTAR O ESQUEMA EM ESTRELA
+# BLOCO 3: EXPORTAR O ESQUEMA EM ESTRELA
 
 print("\n[3/3] Exportar as tabelas do esquema em estrela...")
 

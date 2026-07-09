@@ -47,16 +47,18 @@ def to_div(fig):
     return fig.to_html(full_html=False, include_plotlyjs=False,
                        config={"responsive": True, "displayModeBar": False})
 
-print("Carregar dados...")
+print("A carregar dados...")
 df = pd.read_excel(RAW)
 df.columns = df.columns.str.strip()
 YEARS = sorted(df["Year"].unique().tolist())
 PRODUTOS = sorted(df["Product"].unique().tolist())
 REGIOES = sorted(df["Region"].unique().tolist())
 
-# FASE 2: OLAP
 
-# Q01 Roll-Up
+# FASE 2 — OLAP
+
+
+# ── Q01 Roll-Up
 q01 = df.groupby("Year")["Valor_Total"].sum().reset_index().sort_values("Year")
 _q01_anos  = q01["Year"].astype(str).tolist()
 _q01_vals  = (q01["Valor_Total"] / 1e6).tolist()
@@ -80,7 +82,7 @@ fig_q01.update_yaxes(
 )
 interp_q01 = "As vendas cresceram consistentemente entre 2021 e 2024 (+70.7% acumulado), registando uma ligeira quebra em 2025 (-4.0%). Este comportamento pode indicar desaceleração ou possível saturação de mercado, justificando a análise preditiva desenvolvida na Fase 3."
 
-# Q02 Drill-Down
+# ── Q02 Drill-Down
 q02 = df.groupby(["Year","Region"])["Valor_Total"].sum().reset_index().sort_values("Year")
 _anos_q02 = ["2021","2022","2023","2024","2025"]
 fig_q02 = go.Figure()
@@ -103,7 +105,7 @@ fig_q02.update_yaxes(title="Vendas totais (€M)", gridcolor="#EAECEE",
     tickformat=".2f", ticksuffix="M")
 interp_q02 = "A Região A domina consistentemente a estrutura de vendas, representando cerca de 67% do total. A Região B apresenta o maior crescimento relativo entre 2021 e 2025 (+207%), enquanto as Regiões D e E evidenciam perda de peso após 2023."
 
-# Q04 Market Share
+# ── Q04 Market Share
 q04 = df.groupby(["Year","Region"])["Valor_Total"].sum().reset_index()
 q04["total_ano"] = q04.groupby("Year")["Valor_Total"].transform("sum")
 q04["quota_pct"] = (q04["Valor_Total"] / q04["total_ano"] * 100).round(1)
@@ -129,7 +131,7 @@ fig_q04.update_yaxes(title="Quota de mercado (%)", gridcolor="#EAECEE",
     ticksuffix="%", range=[0, 80])
 interp_q04 = "A Região A mantém uma posição dominante e relativamente estável, representando cerca de 67% das vendas. A Região B apresenta o maior ganho de quota, subindo de 7.8% para 14.7%, enquanto a Região E regista a maior perda estrutural no período."
 
-# Q05 YoY Growth
+# ── Q05 YoY Growth
 q05 = df.groupby("Year")["Valor_Total"].sum().reset_index().sort_values("Year")
 q05["yoy"] = q05["Valor_Total"].pct_change() * 100
 _q05_anos = q05["Year"].astype(str).tolist()
@@ -165,7 +167,7 @@ fig_q05.update_layout(
 )
 interp_q05 = "O maior crescimento ocorreu em 2022 (+49.1%), seguido de uma desaceleração progressiva em 2023 (+8.4%) e 2024 (+5.6%). Em 2025, a taxa torna-se negativa (-4.0%), sinalizando a primeira contração do período analisado e reforçando a necessidade de uma abordagem preditiva na Fase 3."
 
-# Q06 Pareto
+# ── Q06 Pareto
 q06_all = df.groupby("Client")["Valor_Total"].sum().reset_index()
 _total_global = q06_all["Valor_Total"].sum()
 q06 = q06_all.sort_values("Valor_Total", ascending=False).head(30).reset_index(drop=True)
@@ -219,7 +221,7 @@ fig_q06.update_layout(margin=dict(t=55, b=45, l=55, r=90))
 fig_q06.update_layout(legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top"))
 interp_q06 = "O maior cliente representa 10.2% da faturação total. Os 30 maiores clientes acumulam 61% da receita, todos classificados como Tier A, indicando uma base relevante de clientes estratégicos, mas sem concentração excessiva num único cliente."
 
-# Q07 Pivot Produto×Ano
+# ── Q07 Pivot Produto×Ano
 q07 = df.groupby(["Year","Product"])["Valor_Total"].sum().reset_index()
 _anos_q07 = ["2021","2022","2023","2024","2025"]
 fig_q07 = go.Figure()
@@ -252,7 +254,7 @@ fig_q07.update_yaxes(title="Receita total (€M)", gridcolor="#EAECEE",
     tickformat=".2f", ticksuffix="M")
 interp_q07 = "O Produto A lidera a receita ao longo do período, mas regista uma quebra em 2025 (-9.8%). O Produto B recupera em 2025 (+6.8%), enquanto os Produtos C e D apresentam declínio contínuo desde 2022."
 
-# Q08 Cuboide Ano×Região×Produto
+# ── Q08 Cuboide Ano×Região×Produto
 from plotly.subplots import make_subplots
 q08 = df.groupby(["Year","Region","Product"])["Valor_Total"].sum().reset_index()
 _anos_q08 = [2021, 2022, 2023, 2024, 2025]
@@ -290,9 +292,9 @@ fig_q08.update_xaxes(showgrid=False)
 fig_q08.update_yaxes(showgrid=False)
 interp_q08 = "O cuboide Tempo×Região×Produto permite identificar a distribuição da receita por produto dentro de cada região e ano. A análise confirma a dominância dos Produtos A e B, sobretudo na Região A, e evidencia a quebra de 2025 como transversal ao portefólio, embora com maior impacto absoluto nos produtos de maior receita."
 
-# FASE 3: HTS
+# FASE 3 — HTS
 
-print("Calcular previsões HTS...")
+print("A calcular previsões HTS...")
 
 YEAR_PRED = 2026
 ALPHA = 0.05
@@ -329,7 +331,7 @@ def mixed_error(actual, pred):
     sum_err = abs(a.sum() - p.sum()) / a.sum() * 100
     return mae_pct, sum_err, ALPHA * mae_pct + (1 - ALPHA) * sum_err
 
-# Validação por backtesting
+# Validação backtesting
 train_v = [2021, 2022, 2023, 2024]
 val_rows = []
 for label, wide in [("Região", make_wide(df, ["Region"], "Qty")),
@@ -347,7 +349,7 @@ df_val = pd.DataFrame(val_rows)
 # Renomear Cliente×Prod para Cliente×Produto
 df_val["Nível"] = df_val["Nível"].str.replace("Cliente×Prod", "Cliente×Produto")
 
-# Previsão de 2026
+# Previsão 2026
 train_pred = [2022, 2023, 2024, 2025]
 wide_cli["qty_2026"] = wide_cli.apply(lambda r: max2(r, train_pred), axis=1)
 
@@ -373,15 +375,26 @@ for idx, row in pred_by_prod.iterrows():
 
 price_2025    = df[df["Year"]==2025].groupby("Product")["Price"].mean()
 qty_2025_prod = df[df["Year"]==2025].groupby("Product")["Qty"].sum()
+# CORREÇÃO: a receita real de 2025 é a soma direta de cada transação (Qty×Price linha a
+# linha), não a quantidade total multiplicada pelo preço médio — os dois só coincidem se
+# o preço fosse constante em todas as transações do produto, o que não é o caso.
+_rev_2025_real = df[df["Year"]==2025].assign(_r=df["Qty"]*df["Price"]).groupby("Product")["_r"].sum()
 pred_by_prod["price_2025"]   = pred_by_prod["Product"].map(price_2025)
 pred_by_prod["qty_2025"]     = pred_by_prod["Product"].map(qty_2025_prod)
 pred_by_prod["revenue_2026"] = pred_by_prod["qty_2026_bu"] * pred_by_prod["price_2026"]
-pred_by_prod["revenue_2025"] = pred_by_prod["qty_2025"] * pred_by_prod["price_2025"]
+pred_by_prod["revenue_2025"] = pred_by_prod["Product"].map(_rev_2025_real)
 
 # Por Região×Produto
+# CORREÇÃO: clientes com histórico em mais do que uma região (ex. Cliente 2023, em A e C)
+# não podem ser simplesmente duplicados via merge — a sua previsão 2026 é repartida
+# proporcionalmente ao peso histórico (Qty) de cada região para esse cliente.
+_cli_reg_qty = df.groupby(["Client","Region"])["Qty"].sum().reset_index()
+_cli_reg_qty["peso_regiao"] = _cli_reg_qty["Qty"] / _cli_reg_qty.groupby("Client")["Qty"].transform("sum")
+
 wide_cli_reg_prod = wide_cli_pred.merge(
-    df[["Client","Region"]].drop_duplicates(), on="Client", how="left")
-pred_rp = wide_cli_reg_prod.groupby(["Region","Product"])["qty_2026"].sum().reset_index()
+    _cli_reg_qty[["Client","Region","peso_regiao"]], on="Client", how="left")
+wide_cli_reg_prod["qty_2026_rep"] = wide_cli_reg_prod["qty_2026"] * wide_cli_reg_prod["peso_regiao"]
+pred_rp = wide_cli_reg_prod.groupby(["Region","Product"])["qty_2026_rep"].sum().reset_index()
 pred_rp.columns = ["Region","Product","qty_2026_bu"]
 
 rev_2025_rp = df[df["Year"]==2025].copy()
@@ -411,7 +424,7 @@ delta_rev = (total_rev_2026 - total_rev_2025) / total_rev_2025 * 100
 
 print(f"  Revenue 2025: €{total_rev_2025:,.0f} → 2026: €{total_rev_2026:,.0f} ({delta_rev:+.1f}%)")
 
-# HTS Validação
+# ── HTS Validação
 niveis = df_val["Nível"].tolist()
 fig_val = go.Figure()
 fig_val.add_trace(go.Bar(
@@ -436,7 +449,7 @@ fig_val.update_xaxes(showgrid=False, title="Nível Hierárquico")
 fig_val.update_yaxes(title="Erro (%)", gridcolor="#EAECEE", range=[0, 25])
 interp_val = f"O modelo Max2 supera a Moving Average em todos os níveis hierárquicos — Região ({df_val.iloc[0]['Mixed% Max2']:.2f}% vs {df_val.iloc[0]['Mixed% MA']:.2f}%), Produto ({df_val.iloc[1]['Mixed% Max2']:.2f}% vs {df_val.iloc[1]['Mixed% MA']:.2f}%) e Cliente×Produto ({df_val.iloc[2]['Mixed% Max2']:.2f}% vs {df_val.iloc[2]['Mixed% MA']:.2f}%). Todos os erros do Max2 ficam abaixo do limite aceitável de 10%, justificando a sua seleção como modelo de previsão de quantidade."
 
-# P1 Quantidade por Produto
+# ── P1 Quantidade por Produto
 anos_lbl = [str(y) for y in YEARS_ALL] + ["2026 ▶"]
 fig_p1 = go.Figure()
 for prod in PRODUTOS:
@@ -458,7 +471,7 @@ fig_p1.add_vrect(x0=4.5, x1=5.5, fillcolor="rgba(46,134,193,0.07)", line_width=0
 fig_p1.add_vline(x=4.5, line_dash="dash", line_color=AMBER, line_width=1.5)
 interp_p1 = "A quantidade total prevista para 2026 é de aproximadamente 3.84M unidades, representando um forte crescimento face a 2025. O Produto B reforça-se como principal contribuinte em volume, seguido pelo Produto A, enquanto os Produtos C e D permanecem com menor peso relativo."
 
-# P2 Receita por Produto
+# ── P2 Receita por Produto
 _deltas = [(pred_by_prod[pred_by_prod["Product"]==p]["revenue_2026"].values[0] -
             pred_by_prod[pred_by_prod["Product"]==p]["revenue_2025"].values[0]) /
            pred_by_prod[pred_by_prod["Product"]==p]["revenue_2025"].values[0] * 100
@@ -494,9 +507,9 @@ fig_p2.update_yaxes(title="Receita (€M)", gridcolor="#EAECEE",
     tickformat=".2f", ticksuffix="M",
     tickvals=[0, 500000, 1000000, 1500000, 2000000, 2500000, 3000000, 3500000],
     ticktext=["€0M","€0.5M","€1.0M","€1.5M","€2.0M","€2.5M","€3.0M","€3.5M"])
-interp_p2 = "O Produto B ultrapassa o Produto A como principal fonte de receita prevista em 2026 (€3.56M vs €2.84M), com crescimento de +50.6%. O Produto A apresenta crescimento residual (+2.1%), sugerindo maturação. Os Produtos C e D registam crescimentos percentuais elevados, mas partem de bases de receita reduzidas."
+interp_p2 = "O Produto B ultrapassa o Produto A como principal fonte de receita prevista em 2026 (€3.56M vs €2.84M), com crescimento de +77.5%. O Produto A cresce +8.5%, sugerindo maturação face ao forte crescimento do Produto B. Os Produtos C e D registam crescimentos percentuais elevados, mas partem de bases de receita reduzidas."
 
-# W1 Waterfall
+# ── W1 Waterfall
 _rev25 = [pred_by_prod[pred_by_prod["Product"]==p]["revenue_2025"].values[0] for p in PRODUTOS]
 _rev26 = [pred_by_prod[pred_by_prod["Product"]==p]["revenue_2026"].values[0] for p in PRODUTOS]
 _deltas_wf = [r26 - r25 for r25, r26 in zip(_rev25, _rev26)]
@@ -535,7 +548,7 @@ fig_wf.update_yaxes(title="Receita (€)", gridcolor="#EAECEE",
     range=[4_500_000, 7_400_000])
 interp_wf = f"O Produto B é responsável por {_top_pct:.1f}% do crescimento total previsto (+€{_deltas_wf[_top_idx]/1e6:.2f}M). O crescimento encontra-se fortemente concentrado neste produto, sugerindo risco de dependência estratégica num único driver de receita."
 
-# RP1 Heatmap Região×Produto
+# ── RP1 Heatmap Região×Produto
 regioes_rp = sorted(pred_rp["Region"].unique(), reverse=True)  # E→A, heatmap inverte → RA no topo
 matrix_26 = []
 for reg in regioes_rp:
@@ -567,7 +580,7 @@ fig_rp1.update_xaxes(showgrid=False)
 fig_rp1.update_yaxes(showgrid=False)
 interp_rp1 = "A combinação Região A × Produto A concentra a maior receita prevista em 2026, seguida por Região A × Produto B. A Região B apresenta peso relevante sobretudo no Produto A, enquanto os Produtos C e D mantêm impacto residual na maioria das regiões."
 
-# RP2 Variação % Região×Produto
+# ── RP2 Variação % Região×Produto
 fig_rp2 = go.Figure()
 for prod in PRODUTOS:
     sub = pred_rp[pred_rp["Product"]==prod].copy()
@@ -588,7 +601,7 @@ fig_rp2.update_yaxes(title="Variação (%)", gridcolor="#EAECEE", zeroline=True,
 fig_rp2.add_hline(y=0, line_color="#95A5A6", line_width=1)
 interp_rp2 = "A Região B concentra os maiores crescimentos percentuais, com destaque para Produto D (+530.3%). As Regiões C, D e E apresentam apenas um produto activo em 2025 (com receita registada), pelo que só esse produto aparece no gráfico — ausência de barra não significa crescimento zero, mas ausência de actividade comparável nessa combinação. Estes valores devem ser interpretados com cautela: crescimentos elevados em Produtos C e D partem de bases de receita reduzidas. O RP2 complementa o RP1: mostra intensidade relativa de crescimento, mas não substitui a análise do impacto absoluto em receita."
 
-# Tabela RP
+# ── Tabela RP
 tbl_rp = pred_rp[pred_rp["rev_2025"]>0].copy()
 
 # Distribuir receita k-NN proporcionalmente pela quantidade de cada Região×Produto
